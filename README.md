@@ -1,14 +1,21 @@
 # flutter_mediasoup_client
 
-A new Flutter package project.
+Port of mediasoup client for flutter/dart.
 
-## Getting Started
+I've started making my own port of flutter mediasoup client since the current available option just
+seems abandoned and not possible to revive (not using null safety and doesn't have any base classes
+implemented). https://github.com/flutter-webrtc/flutter-mediasoup-client
 
-This project is a starting point for a Dart
-[package](https://flutter.dev/developing-packages/),
-a library module containing code that can be shared easily across
-multiple Flutter or Dart projects.
+I've had experience working with mediasoup before, and found lots of interest in it. So thought I'd
+take it upon myself to try this out.
 
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.dev/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+## Status
+- Setup base repository for porting over mediasoup-client v3
+- Added RtpParameters, Producer, and Consumer classes
+
+## TODO
+- Add Device and Transport
+- Setup example project for basic webrtc video call
+- Work on Data Producer/Consumer
+
+Pull requests are greatly appreciated!
