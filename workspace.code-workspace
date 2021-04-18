@@ -1,0 +1,13 @@
+{
+  "folders": [
+	{
+		"name": "example",
+		"path": "example"
+	},
+	{
+		"name": "flutter_mediasoup_client",
+		"path": "."
+	}
+],
+  "settings": {}
+}
