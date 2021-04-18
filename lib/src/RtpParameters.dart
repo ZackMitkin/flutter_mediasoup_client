@@ -3,7 +3,18 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 /// Media kind ('audio' or 'video').
 enum MediaKind { audio, video }
 
-class RtpCapabilities {}
+/// The RTP capabilities define what mediasoup or an endpoint can receive at
+/// media level.
+class RtpCapabilities {
+  /// Supported media and RTX codecs.
+  List<RtpCodecCapability>? codecs;
+
+  /// Supported RTP header extensions.
+  List<RtpHeaderExtension>? headerExtensions;
+
+  /// Supported FEC mechanisms.
+  List<String>? fecMechanisms;
+}
 
 /// Direction of RTP header extension.
 enum RtpHeaderExtensionDirection { sendrecv, sendonly, recvonly, inactive }
@@ -55,7 +66,7 @@ class RtpCodecCapability {
   ///  Codec specific parameters. Some parameters (such as 'packetization-mode'
   ///  and 'profile-level-id' in H264 or 'profile-id' in VP9) are critical for
   ///  codec matching.
-  dynamic? parameters;
+  Map<String, dynamic>? parameters;
 
   List<RtcpFeedback>? rtcpFeedback;
 }
