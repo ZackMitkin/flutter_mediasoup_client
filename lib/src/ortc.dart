@@ -1,4 +1,4 @@
-import 'package:flutter_mediasoup_client/src/RtpParameters.dart';
+import 'package:flutter_mediasoup_client/src/rtp_parameters.dart';
 
 void validateRtpCapabilities(RtpCapabilities caps) {
   // codecs is optional. If unset, fill with an empty array.

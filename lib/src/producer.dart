@@ -1,8 +1,31 @@
 import 'package:eventify/eventify.dart';
-import 'package:flutter_mediasoup_client/src/RtpParameters.dart';
+import 'package:flutter_mediasoup_client/src/rtp_parameters.dart';
 import 'package:flutter_mediasoup_client/src/errors.dart';
-import 'package:flutter_mediasoup_client/src/utils/EnhancedEventEmitter.dart';
+import 'package:flutter_mediasoup_client/src/utils/enhanced_event_emitter.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+
+class ProducerCodecOptions {
+  bool? opusStereo;
+  bool? opusFec;
+  bool? opusDtx;
+  int? opusMaxPlaybackRate;
+  int? opusMaxAverageBitrate;
+  int? opusPtime;
+  int? videoGoogleStartBitrate;
+  int? videoGoogleMaxBitrate;
+  int? videoGoogleMinBitrate;
+
+  ProducerCodecOptions(
+      {this.opusDtx,
+      this.opusFec,
+      this.opusMaxAverageBitrate,
+      this.opusMaxPlaybackRate,
+      this.opusPtime,
+      this.opusStereo,
+      this.videoGoogleMaxBitrate,
+      this.videoGoogleMinBitrate,
+      this.videoGoogleStartBitrate});
+}
 
 class Producer extends EventEmitter {
   late final String _id;

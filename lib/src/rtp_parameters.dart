@@ -1,7 +1,7 @@
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 /// Media kind ('audio' or 'video').
-enum MediaKind { audio, video }
+enum MediaKind { audio, video, application }
 
 /// The RTP capabilities define what mediasoup or an endpoint can receive at
 /// media level.
@@ -135,7 +135,7 @@ class RtpParameters {
   String? mid;
 
   /// Media and RTX codecs in use.
-  late List<RtpCodecParameters> codes;
+  late List<RtpCodecParameters> codecs;
 
   /// RTP header extensions in use.
   List<RtpHeaderExtensionParameters>? headerExtensions;

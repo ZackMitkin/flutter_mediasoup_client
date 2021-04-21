@@ -1,7 +1,7 @@
 import 'dart:core';
 import 'package:eventify/eventify.dart';
-import 'package:flutter_mediasoup_client/src/RtpParameters.dart';
-import 'package:flutter_mediasoup_client/src/utils/EnhancedEventEmitter.dart';
+import 'package:flutter_mediasoup_client/src/rtp_parameters.dart';
+import 'package:flutter_mediasoup_client/src/utils/enhanced_event_emitter.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'errors.dart';
