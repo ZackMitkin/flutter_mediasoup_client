@@ -2,6 +2,7 @@ import 'package:flutter_mediasoup_client/src/producer.dart';
 import 'package:flutter_mediasoup_client/src/rtp_parameters.dart';
 import 'package:flutter_mediasoup_client/src/sctp_parameters.dart';
 import 'package:flutter_mediasoup_client/src/transport.dart';
+import 'dart:convert';
 
 abstract class MediaSection {
   /// SDP media object.
@@ -94,7 +95,168 @@ abstract class MediaSection {
 }
 
 class AnswerMediaSection extends MediaSection {
-  AnswerMediaSection(
+  AnswerMediaSection({
+    IceParameters? iceParameters,
+    List<IceCandidate>? iceCandidates,
+    DtlsParameters? dtlsParameters,
+    SctpParameters? sctpParameters,
+    PlainRtpParameters? plainRtpParameters,
+    bool? planB = false,
+    dynamic? offerMediaObject,
+    RtpParameters? offerRtpParameters,
+    RtpParameters? answerRtpParameters,
+    ProducerCodecOptions? codecOptions,
+    bool? extmapAllowMixed,
+  }) : super(
+            iceParameters: iceParameters,
+            planB: planB,
+            iceCandidates: iceCandidates,
+            dtlsParameters: dtlsParameters) {
+    mediaObject['mid'] = offerMediaObject['mid'];
+    mediaObject['type'] = offerMediaObject['type'];
+    mediaObject['protocol'] = offerMediaObject['protocol'];
+
+    if (plainRtpParameters == null) {
+      mediaObject['connection'] = {'ip': '127.0.0.1', 'version': 4};
+      mediaObject['port'] = 7;
+    } else {
+      mediaObject['connection'] = {
+        'ip': plainRtpParameters.ip,
+        'version': plainRtpParameters.ipVersion
+      };
+      mediaObject['port'] = plainRtpParameters.port;
+    }
+
+    switch (offerMediaObject['type']) {
+      case 'audio':
+      case 'video':
+        {
+          mediaObject['direction'] = 'recvonly';
+          mediaObject['rtp'] = [];
+          mediaObject['rtcpFb'] = [];
+          mediaObject['fmtp'] = [];
+
+          for (var codec in answerRtpParameters!.codecs) {
+            dynamic rtp = {
+              'payload': codec.payloadType,
+              'codec': getCodecName(codec),
+              'rate': codec.clockRate
+            };
+
+            if (codec.channels! > 1) rtp.encoding = codec.channels;
+
+            mediaObject['rtp'].add(rtp);
+
+            Map<String, dynamic> codecParameters =
+                json.decode(json.encode(codec.parameters ?? {}));
+
+            if (codecOptions != null) {
+              final offerCodec = offerRtpParameters!.codecs.firstWhere(
+                  (item) => (item.payloadType == codec.payloadType));
+
+              switch (codec.mimeType.toLowerCase()) {
+                case 'audio/opus':
+                  {
+                    if (codecOptions.opusStereo != null) {
+                      offerCodec.parameters['sprop-stereo'] =
+                          codecOptions.opusStereo == true ? 1 : 0;
+                      codecParameters['stereo'] =
+                          codecOptions.opusStereo == true ? 1 : 0;
+                    }
+
+                    if (codecOptions.opusFec != null) {
+                      offerCodec.parameters['useinbandfec'] =
+                          codecOptions.opusFec == true ? 1 : 0;
+                      codecParameters['useinbandfec'] =
+                          codecOptions.opusFec == true ? 1 : 0;
+                    }
+
+                    if (codecOptions.opusDtx != null) {
+                      offerCodec.parameters['usedtx'] =
+                          codecOptions.opusDtx == true ? 1 : 0;
+                      codecParameters['useinbandfec'] =
+                          codecOptions.opusDtx == true ? 1 : 0;
+                    }
+
+                    if (codecOptions.opusMaxPlaybackRate != null) {
+                      codecParameters['maxplaybackrate'] =
+                          codecOptions.opusMaxPlaybackRate;
+                    }
+
+                    if (codecOptions.opusMaxAverageBitrate != null) {
+                      codecParameters['maxaveragebitrate'] =
+                          codecOptions.opusMaxAverageBitrate;
+                    }
+
+                    if (codecOptions.opusPtime != null) {
+                      offerCodec.parameters.ptime = codecOptions.opusPtime;
+                      codecParameters['ptime'] = codecOptions.opusPtime;
+                    }
+
+                    break;
+                  }
+                case 'video/vp8':
+                case 'video/vp9':
+                case 'video/h264':
+                case 'video/h265':
+                  {
+                    if (codecOptions.videoGoogleStartBitrate != null) {
+                      codecParameters['x-google-start-bitrate'] =
+                          codecOptions.videoGoogleStartBitrate;
+                    }
+
+                    if (codecOptions.videoGoogleMaxBitrate != null) {
+                      codecParameters['x-google-max-bitrate'] =
+                          codecOptions.videoGoogleMaxBitrate;
+                    }
+
+                    if (codecOptions.videoGoogleMinBitrate != null) {
+                      codecParameters['x-google-min-bitrate'] =
+                          codecOptions.videoGoogleMinBitrate;
+                    }
+                  }
+                  break;
+              }
+            }
+
+            final fmtp = {'payload': codec.payloadType, 'config': ''};
+            for (final key in codecParameters.keys) {
+              if ((fmtp['config'] as String).isNotEmpty)
+                fmtp['config'] = fmtp['config'] ?? '' ';';
+            }
+
+            if ((fmtp['config'] as String).isNotEmpty) {
+              mediaObject['fmtp'].add(fmtp);
+            }
+
+            for (final fb in codec.rtcpFeedback!) {
+              mediaObject['rtcpFb'].add({
+                'payload': codec.payloadType,
+                'type': fb.type,
+                'subtype': fb.parameter
+              });
+            }
+          }
+
+          mediaObject['payloads'] = answerRtpParameters.codecs
+              .map((codec) => codec.payloadType)
+              .join(' ');
+
+          mediaObject['ext'] = [];
+
+          // TODO: Line 323 MediaSection.ts
+        }
+    }
+  }
+
+  @override
+  void setDtlsRole(DtlsRole role) {
+    // TODO: implement setDtlsRole
+  }
+}
+
+class AnswerMediaSection1 extends MediaSection {
+  AnswerMediaSection1(
       {required String mid,
       required MediaKind kind,
       IceParameters? iceParameters,

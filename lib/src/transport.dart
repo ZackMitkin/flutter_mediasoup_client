@@ -64,13 +64,14 @@ class IceCandidate {
 	 */
   final TcpType? tcpType;
 
-  IceCandidate({required this.foundation,
-    required this.priority,
-    required this.ip,
-    required this.protocol,
-    required this.port,
-    required this.type,
-    this.tcpType});
+  IceCandidate(
+      {required this.foundation,
+      required this.priority,
+      required this.ip,
+      required this.protocol,
+      required this.port,
+      required this.type,
+      this.tcpType});
 
   static IceCandidate fromDynamic(data) {
     return IceCandidate(
@@ -81,9 +82,11 @@ class IceCandidate {
             .firstWhere((e) => e.toString() == 'Protocol.${data['protocol']}'),
         port: data['port'],
         type: IceCandidateType.values.firstWhere(
-                (e) => e.toString() == 'IceCandidateType.${data['type']}'),
-        tcpType: data['tcpType'] != null ? TcpType.values.firstWhere((e) =>
-        e.toString() == 'TcpType.${data['tcpType']}') : null)
+            (e) => e.toString() == 'IceCandidateType.${data['type']}'),
+        tcpType: data['tcpType'] != null
+            ? TcpType.values
+                .firstWhere((e) => e.toString() == 'TcpType.${data['tcpType']}')
+            : null);
   }
 }
 
