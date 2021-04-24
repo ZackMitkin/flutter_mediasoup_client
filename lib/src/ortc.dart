@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_mediasoup_client/src/rtp_parameters.dart';
 
 void validateRtpCapabilities(RtpCapabilities caps) {
@@ -81,4 +82,146 @@ void validateRtcpFeedback(RtcpFeedback fb) {
 void validateRtpHeaderExtension(RtpHeaderExtension ext) {
   ext.preferredEncrypt ??= false;
   ext.direction ??= RtpHeaderExtensionDirection.sendrecv;
+}
+
+/// Generate RTP parameters of the given kind suitable for the remote SDP
+/// answer.
+RtpParameters getSendingRemoteRtpParameters(
+    MediaKind mediaKind, dynamic extendedRtpCapabilities) {
+  final kind = describeEnum(mediaKind);
+  final rtpParameters = RtpParameters(
+      codecs: [], encodings: [], headerExtensions: [], rtcp: RtcpParameters());
+
+  for (final extendedCodec in extendedRtpCapabilities['codecs']) {
+    if (extendedCodec.kind != kind) continue;
+
+    final codec = RtpCodecParameters(
+        mimeType: extendedCodec['mimeType'],
+        payloadType: extendedCodec['localPayloadType'],
+        clockRate: extendedCodec['clockRate'],
+        channels: extendedCodec['channels'],
+        parameters: extendedCodec['remoteParameters'],
+        rtcpFeedback: extendedCodec['rtcpFeedback']);
+
+    rtpParameters.codecs.add(codec);
+
+    // Add RTX codec.
+    if (extendedCodec['localRtxPayloadType'] != null) {
+      final rtxCodec = RtpCodecParameters(
+          mimeType: '${extendedCodec.kind}/rtx',
+          payloadType: extendedCodec['localRtxPayloadType'],
+          clockRate: extendedCodec['clockRate'],
+          rtcpFeedback: [],
+          parameters: {'apt': extendedCodec['localPayloadType']});
+
+      rtpParameters.codecs.add(rtxCodec);
+    }
+  }
+
+  for (final extendedExtension in extendedRtpCapabilities['headerExtensions']) {
+    // Ignore RTP extensions of a different kind and
+    // those not valid for sending.
+    if ((extendedExtension['kind'] != null &&
+            extendedExtension['kind'] != kind) ||
+        (extendedExtension['direction'] != 'sendrecv' &&
+            extendedExtension['direction'] != 'sendonly')) {
+      continue;
+    }
+
+    final ext = RtpHeaderExtensionParameters(
+        uri: extendedExtension['uri'],
+        id: extendedExtension['sendId'],
+        encrypt: extendedExtension['encrypt'],
+        parameters: {});
+
+    rtpParameters.headerExtensions!.add(ext);
+  }
+
+  // Reduce codecs' RTCP feedback. Use Transport-CC if available,
+  // REMB otherwise.
+  if (rtpParameters.headerExtensions!
+      .where((ext) =>
+          ext.uri ==
+          "'http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01")
+      .isNotEmpty) {
+    for (final codec in rtpParameters.codecs) {
+      codec.rtcpFeedback = (codec.rtcpFeedback ?? [])
+          .where((fb) => fb.type != 'goog-remb')
+          .toList();
+    }
+  } else if (rtpParameters.headerExtensions!
+      .where((ext) =>
+          ext.uri ==
+          'http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time')
+      .isNotEmpty) {
+    for (final codec in rtpParameters.codecs) {
+      codec.rtcpFeedback = (codec.rtcpFeedback ?? [])
+          .where((fb) => fb.type != 'transport-cc')
+          .toList();
+    }
+  } else {
+    for (final codec in rtpParameters.codecs) {
+      codec.rtcpFeedback = (codec.rtcpFeedback ?? [])
+          .where((fb) => fb.type != 'transport-cc' && fb.type != 'goog-remb')
+          .toList();
+    }
+  }
+  return rtpParameters;
+}
+
+RtpParameters getSendingRtpParameters(
+    MediaKind mediaKind, dynamic extendedRtpCapabilities) {
+  final kind = describeEnum(mediaKind);
+  final rtpParameters = RtpParameters(
+      codecs: [],
+      headerExtensions: [],
+      rtcp: RtcpParameters(),
+      encodings: [],
+      mid: null);
+
+  for (final extendedCodec in extendedRtpCapabilities['codecs']) {
+    if (extendedCodec['kind'] != kind) continue;
+
+    final codec = RtpCodecParameters(
+        mimeType: extendedCodec['mimeType'],
+        payloadType: extendedCodec['localPayloadType'],
+        clockRate: extendedCodec['clockRate'],
+        channels: extendedCodec['channels'],
+        parameters: extendedCodec['remoteParameters'],
+        rtcpFeedback: extendedCodec['rtcpFeedback']);
+
+    rtpParameters.codecs.add(codec);
+
+    // Add RTX codec.
+    if (extendedCodec['localRtxPayloadType'] != null) {
+      final rtxCodec = RtpCodecParameters(
+          mimeType: '${extendedCodec.kind}/rtx',
+          payloadType: extendedCodec['localRtxPayloadType'],
+          clockRate: extendedCodec['clockRate'],
+          rtcpFeedback: [],
+          parameters: {'apt': extendedCodec['localPayloadType']});
+
+      rtpParameters.codecs.add(rtxCodec);
+    }
+  }
+
+  for (final extendedExtension in extendedRtpCapabilities['headerExtensions']) {
+    // Ignore RTP extensions of a different kind
+    // and those not valid for sending.
+    if ((extendedExtension['kind'] && extendedExtension.kind != kind) ||
+        (extendedExtension.direction != 'sendrecv' &&
+            extendedExtension.direction != 'sendonly')) {
+      continue;
+    }
+
+    final ext = RtpHeaderExtensionParameters(
+        uri: extendedExtension['uri'],
+        id: extendedExtension['sendId'],
+        encrypt: extendedExtension['encrypt'],
+        parameters: {});
+
+    rtpParameters.headerExtensions!.add(ext);
+  }
+
+  return rtpParameters;
 }

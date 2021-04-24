@@ -12,12 +12,17 @@ dependencies:
   flutter:
     sdk: flutter
 
+  json_annotation: ^4.0.0
+
   eventify: ^1.0.0
   flutter_webrtc: ^0.6.3
+  sdp_transform: ^0.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  build_runner: ^2.0.0
+  json_serializable: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

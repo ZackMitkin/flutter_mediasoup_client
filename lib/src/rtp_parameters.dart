@@ -1,10 +1,35 @@
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'rtp_parameters.g.dart';
 
 /// Media kind ('audio' or 'video').
 enum MediaKind { audio, video, application }
 
+@JsonSerializable(explicitToJson: true)
+class RTCIceServer {
+  final List<String> urls;
+  final String? username;
+  final String? credential;
+  final String credentialType;
+
+  RTCIceServer(
+      {required this.urls,
+      this.username,
+      this.credential,
+      this.credentialType = 'password'});
+
+  factory RTCIceServer.fromJson(Map<String, dynamic> json) =>
+      _$RTCIceServerFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RTCIceServerToJson(this);
+}
+
+enum RTCIceTransportPolicy { relay, all }
+
 /// The RTP capabilities define what mediasoup or an endpoint can receive at
 /// media level.
+@JsonSerializable(explicitToJson: true)
 class RtpCapabilities {
   /// Supported media and RTX codecs.
   List<RtpCodecCapability>? codecs;
@@ -14,6 +39,13 @@ class RtpCapabilities {
 
   /// Supported FEC mechanisms.
   List<String>? fecMechanisms;
+
+  RtpCapabilities({this.headerExtensions, this.codecs, this.fecMechanisms});
+
+  factory RtpCapabilities.fromJson(Map<String, dynamic> json) =>
+      _$RtpCapabilitiesFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpCapabilitiesToJson(this);
 }
 
 /// Direction of RTP header extension.
@@ -22,13 +54,21 @@ enum RtpHeaderExtensionDirection { sendrecv, sendonly, recvonly, inactive }
 /// Provides information on RTCP feedback messages for a specific codec. Those
 /// messages can be transport layer feedback messages or codec-specific feedback
 /// messages. The list of RTCP feedbacks supported by mediasoup is defined in the
-/// supportedRtpCapabilities.ts file.
+/// supportedRtpCapabilities.dart file.
+@JsonSerializable(explicitToJson: true)
 class RtcpFeedback {
   ///  RTCP feedback type.
   late String type;
 
   ///  RTCP feedback parameter.
   String? parameter;
+
+  RtcpFeedback({required this.type, this.parameter});
+
+  factory RtcpFeedback.fromJson(Map<String, dynamic> json) =>
+      _$RtcpFeedbackFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtcpFeedbackToJson(this);
 }
 
 /// Provides information on the capabilities of a codec within the RTP
@@ -46,6 +86,7 @@ class RtcpFeedback {
 /// RtpCodecCapability entries in the mediaCodecs array of RouterOptions do not
 /// require preferredPayloadType field (if unset, mediasoup will choose a random
 /// one). If given, make sure it's in the 96-127 range.
+@JsonSerializable(explicitToJson: true)
 class RtpCodecCapability {
   /// Media Kind
   late MediaKind kind;
@@ -66,9 +107,23 @@ class RtpCodecCapability {
   ///  Codec specific parameters. Some parameters (such as 'packetization-mode'
   ///  and 'profile-level-id' in H264 or 'profile-id' in VP9) are critical for
   ///  codec matching.
-  Map<String, dynamic>? parameters;
+  Map<dynamic, dynamic>? parameters;
 
   List<RtcpFeedback>? rtcpFeedback;
+
+  RtpCodecCapability(
+      {required this.kind,
+      required this.mimeType,
+      required this.clockRate,
+      this.preferredPayloadType,
+      this.channels,
+      this.parameters,
+      this.rtcpFeedback});
+
+  factory RtpCodecCapability.fromJson(Map<String, dynamic> json) =>
+      _$RtpCodecCapabilityFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpCodecCapabilityToJson(this);
 }
 
 /// Provides information relating to supported header extensions. The list of
@@ -79,6 +134,7 @@ class RtpCodecCapability {
 /// direction field is just present in mediasoup RTP capabilities (retrieved via
 /// router.rtpCapabilities or mediasoup.getSupportedRtpCapabilities()). It's
 /// ignored if present in endpoints' RTP capabilities.
+@JsonSerializable(explicitToJson: true)
 class RtpHeaderExtension {
   /// Media kind. If empty string, it's valid for all kinds.
   /// Default any media kind.
@@ -99,6 +155,18 @@ class RtpHeaderExtension {
   /// 'sendonly' means that mediasoup can send (but not receive) it. 'recvonly'
   /// means that mediasoup can receive (but not send) it.
   RtpHeaderExtensionDirection? direction;
+
+  RtpHeaderExtension(
+      {required this.preferredId,
+      required this.uri,
+      this.kind,
+      this.preferredEncrypt,
+      this.direction});
+
+  factory RtpHeaderExtension.fromJson(Map<String, dynamic> json) =>
+      _$RtpHeaderExtensionFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpHeaderExtensionToJson(this);
 }
 
 /// The RTP send parameters describe a media stream received by mediasoup from
@@ -130,6 +198,7 @@ class RtpHeaderExtension {
 /// endpoint supports RTX), regardless of the original RTP send parameters in
 /// the associated producer. This applies even if the producer's encodings have
 /// rid set.
+@JsonSerializable(explicitToJson: true)
 class RtpParameters {
   /// The MID RTP extension value as defined in the BUNDLE specification.
   String? mid;
@@ -145,22 +214,44 @@ class RtpParameters {
 
   /// Parameters used for RTCP.
   RtcpParameters? rtcp;
+
+  RtpParameters(
+      {required this.codecs,
+      this.headerExtensions,
+      this.encodings,
+      this.rtcp,
+      this.mid});
+
+  factory RtpParameters.fromJson(Map<String, dynamic> json) =>
+      _$RtpParametersFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpParametersToJson(this);
 }
 
+@JsonSerializable(explicitToJson: true)
 class RtcpParameters {
   /// The Canonical Name (CNAME) used by RTCP (e.g. in SDES messages).
   String? cname;
 
-  /// Whether reduced size RTCP RFC 5506 is configured (if true) or compound RTCP
+  /// Whether reduced size RTCP RFC 5506 is configured (if true)
+  /// or compound RTCP
   /// as specified in RFC 3550 (if false). Default true.
   bool? reducedSize;
 
   /// Whether RTCP-mux is used. Default true.
   bool? mux;
+
+  RtcpParameters({this.cname, this.reducedSize, this.mux});
+
+  factory RtcpParameters.fromJson(Map<String, dynamic> json) =>
+      _$RtcpParametersFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtcpParametersToJson(this);
 }
 
 /// Provides information relating to an encoding, which represents a media RTP
 /// stream and its associated RTX stream (if any).
+@JsonSerializable(explicitToJson: true)
 class RtpEncodingParameters {
   /// The media SSRC.
   int? ssrc;
@@ -193,12 +284,37 @@ class RtpEncodingParameters {
   bool? adaptivePtime;
   Priority? priority;
   Priority? networkPriority;
+
+  RtpEncodingParameters(
+      {this.ssrc,
+      this.rid,
+      this.codecPayloadType,
+      this.rtx,
+      this.dtx,
+      this.scalabilityMode,
+      this.scaleResolutionDownBy,
+      this.maxBitrate,
+      this.adaptivePtime,
+      this.priority,
+      this.networkPriority});
+
+  factory RtpEncodingParameters.fromJson(Map<String, dynamic> json) =>
+      _$RtpEncodingParametersFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpEncodingParametersToJson(this);
 }
 
 enum Priority { veryLow, low, medium, high }
 
+@JsonSerializable(explicitToJson: true)
 class Rtx {
   late int ssrc;
+
+  Rtx({required this.ssrc});
+
+  factory Rtx.fromJson(Map<String, dynamic> json) => _$RtxFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtxToJson(this);
 }
 
 /// Defines a RTP header extension within the RTP parameters. The list of RTP
@@ -207,6 +323,7 @@ class Rtx {
 ///
 /// mediasoup does not currently support encrypted RTP header extensions and no
 /// parameters are currently considered.
+@JsonSerializable(explicitToJson: true)
 class RtpHeaderExtensionParameters {
   /// The URI of the RTP header extension, as defined in RFC 5285.
   late String uri;
@@ -214,16 +331,26 @@ class RtpHeaderExtensionParameters {
   /// The numeric identifier that goes in the RTP packet. Must be unique.
   late int id;
 
-  /// If true, the value in the header is encrypted as per RFC 6904. Default false.
+  /// If true, the value in the header is encrypted as per RFC 6904.
+  /// Default false.
   bool? encrypt;
 
   /// Configuration parameters for the header extension.
   dynamic? parameters;
+
+  RtpHeaderExtensionParameters(
+      {required this.uri, required this.id, this.encrypt, this.parameters});
+
+  factory RtpHeaderExtensionParameters.fromJson(Map<String, dynamic> json) =>
+      _$RtpHeaderExtensionParametersFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpHeaderExtensionParametersToJson(this);
 }
 
 /// Provides information on codec settings within the RTP parameters. The list
 /// of media codecs supported by mediasoup and their settings is defined in the
 /// supportedRtpCapabilities.dart file.
+@JsonSerializable(explicitToJson: true)
 class RtpCodecParameters {
   /// The codec MIME media type/subtype (e.g. 'audio/opus', 'video/VP8').
   late String mimeType;
@@ -245,4 +372,17 @@ class RtpCodecParameters {
 
   /// Transport layer and codec-specific feedback messages for this codec.
   List<RtcpFeedback>? rtcpFeedback;
+
+  RtpCodecParameters(
+      {required this.mimeType,
+      required this.payloadType,
+      required this.clockRate,
+      this.channels,
+      this.parameters,
+      this.rtcpFeedback});
+
+  factory RtpCodecParameters.fromJson(Map<String, dynamic> json) =>
+      _$RtpCodecParametersFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RtpCodecParametersToJson(this);
 }
