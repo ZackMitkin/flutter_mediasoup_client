@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_mediasoup_client/src/producer.dart';
 import 'package:flutter_mediasoup_client/src/rtp_parameters.dart';
 import 'package:flutter_mediasoup_client/src/sctp_parameters.dart';
@@ -244,65 +245,141 @@ class AnswerMediaSection extends MediaSection {
 
           mediaObject['ext'] = [];
 
-          // TODO: Line 323 MediaSection.ts
+          for (final ext in answerRtpParameters.headerExtensions!) {
+            // Don't add a header extension if not present in the offer.
+            final found = (offerMediaObject['ext'] ?? [])
+                .firstWhere((element) => element['uri'] == ext.uri);
+
+            if (found != null) {
+              mediaObject['ext'].add({'uri': ext.uri, 'value': ext.id});
+            }
+          }
+
+          // Allow both 1 byte and 2 bytes length header extensions.
+          if (extmapAllowMixed == true &&
+              offerMediaObject['extmapAllowMixed'] == 'extmap-allow-mixed') {
+            mediaObject['extmapAllowMixed'] = 'extmap-allow-mixed';
+          }
+
+          // Simulcast
+          if (offerMediaObject['simulcast'] != null) {
+            mediaObject['simulcast'] = {
+              'dir1': 'recv',
+              'list1': offerMediaObject['simulcast']['list1']
+            };
+
+            mediaObject['rids'] = [];
+
+            for (final rid in offerMediaObject['rids'] ?? []) {
+              if (rid['direction'] != 'send') {
+                continue;
+              }
+
+              mediaObject['rids'].add({'id': rid['id'], 'direction': 'recv'});
+            }
+          }
+
+          // Simulcast (draft version 03)
+          else if (offerMediaObject['simulcast_03']) {
+            mediaObject['simulcast_03'] = {
+              'value': offerMediaObject['simulcast_03']['value']
+                  .replaceAll('/send/g', 'recv')
+            };
+
+            mediaObject['rids'] = [];
+
+            for (final rid in offerMediaObject['rids'] ?? []) {
+              if (rid['direction'] != 'send') {
+                continue;
+              }
+
+              mediaObject['rids'].add({'id': rid['id'], 'direction': 'recv'});
+            }
+          }
+
+          mediaObject['rtcpMux'] = 'rtcp-mux';
+          mediaObject['rtcpRsize'] = 'rtcp-rsize';
+
+          if (planB == true && mediaObject['type'] == 'video') {
+            mediaObject['xGoogleFlag'] = 'conference';
+          }
+
+          break;
         }
     }
   }
 
   @override
   void setDtlsRole(DtlsRole role) {
-    // TODO: implement setDtlsRole
+    switch (role) {
+      case DtlsRole.client:
+        mediaObject['setup'] = 'active';
+        break;
+      case DtlsRole.server:
+        mediaObject['setup'] = 'passive';
+        break;
+      case DtlsRole.auto:
+        mediaObject['setup'] = 'actpass';
+        break;
+    }
   }
 }
 
-class AnswerMediaSection1 extends MediaSection {
-  AnswerMediaSection1(
-      {required String mid,
-      required MediaKind kind,
-      IceParameters? iceParameters,
-      List<IceCandidate>? iceCandidates,
-      DtlsParameters? dtlsParameters,
-      SctpParameters? sctpParameters,
-      PlainRtpParameters? plainRtpParameters,
-      dynamic? offerMediaObject,
-      RtpParameters? offerRtpParameters,
-      RtpParameters? answerRtpParameters,
-      ProducerCodecOptions? codecOptions,
-      bool? extmapAllowMixed,
-      bool? planB = false,
-      String? streamId,
-      String? trackId,
-      bool? oldDataChannelSpec})
-      : super(
+class OfferMediaSection extends MediaSection {
+  OfferMediaSection({
+    required String mid,
+    required MediaKind kind,
+    IceParameters? iceParameters,
+    List<IceCandidate>? iceCandidates,
+    DtlsParameters? dtlsParameters,
+    SctpParameters? sctpParameters,
+    PlainRtpParameters? plainRtpParameters,
+    RtpParameters? offerRtpParameters,
+    String? streamId,
+    String? trackId,
+    bool? oldDataChannelSpec,
+    bool planB = false,
+  }) : super(
             iceParameters: iceParameters,
             planB: planB,
             iceCandidates: iceCandidates,
             dtlsParameters: dtlsParameters) {
-    mediaObject['mid'] = offerMediaObject['mid'];
-    mediaObject['type'] = offerMediaObject['type'];
-    mediaObject['protocol'] = offerMediaObject['protocol'];
+    mediaObject['mid'] = mid;
+    mediaObject['type'] = describeEnum(kind);
 
     if (plainRtpParameters == null) {
       mediaObject['connection'] = {'ip': '127.0.0.1', 'version': 4};
+
+      if (sctpParameters == null) {
+        mediaObject['protocol'] = 'UDP/TLS/RTP/SAVPF';
+      } else {
+        mediaObject['protocol'] = 'UDP/DTLS/SCTP';
+      }
+
       mediaObject['port'] = 7;
     } else {
       mediaObject['connection'] = {
         'ip': plainRtpParameters.ip,
         'version': plainRtpParameters.ipVersion
       };
+      mediaObject['protocol'] = 'RTP/AVP';
       mediaObject['port'] = plainRtpParameters.port;
     }
 
-    switch (offerMediaObject['type']) {
-      case 'audio':
-      case 'video':
+    switch (kind) {
+      case MediaKind.audio:
+      case MediaKind.video:
         {
           mediaObject['direction'] = 'recvonly';
           mediaObject['rtp'] = [];
           mediaObject['rtcpFb'] = [];
           mediaObject['fmtp'] = [];
 
-          for (var codec in answerRtpParameters!.codecs) {
+          if (!planB) {
+            mediaObject['msid'] = '${streamId ?? '-'} $trackId';
+          }
+
+          for (var codec in offerRtpParameters!.codecs) {
             dynamic rtp = {
               'payload': codec.payloadType,
               'codec': getCodecName(codec),
@@ -321,21 +398,9 @@ class AnswerMediaSection1 extends MediaSection {
               }
               fmtp['config'] += '$key=${codec.parameters[key]}';
             }
-
-            if (fmtp['config'] != null) {
-              mediaObject['fmtp'].add(fmtp);
-            }
-
-            for (var fb in codec.rtcpFeedback!) {
-              mediaObject['rtcpFb'].add({
-                'payload': codec.payloadType,
-                'type': fb.type,
-                'subtype': fb.parameter
-              });
-            }
           }
 
-          mediaObject['payloads'] = offerRtpParameters!.codecs
+          mediaObject['payloads'] = offerRtpParameters.codecs
               .map((codec) => codec.payloadType)
               .join(' ');
 
@@ -390,15 +455,15 @@ class AnswerMediaSection1 extends MediaSection {
               });
             }
 
+            // Associate original and retransmission SSRCs.
             mediaObject['ssrcGroups']
                 .add({'semantics': 'FID', 'ssrcs': '$ssrc $rtxSsrc'});
           }
+
           break;
         }
-      case 'application':
-        {
-          // TODO
-        }
+      case MediaKind.application:
+        break;
     }
   }
 
